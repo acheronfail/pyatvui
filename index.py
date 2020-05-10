@@ -44,11 +44,13 @@ async def start_ui(stdscr, atv, device):
     stdscr.addstr(0, col_1 + 1, 'Up')
     stdscr.addstr(row_2 + 1, col_1 + 1, 'Down')
     stdscr.addstr(row_2 + 1, 0, 'Suspend')
-    stdscr.addstr(row_2 + 1, col_2 + 1, '{}'.format(device.name))
-    stdscr.addstr(row_2 + 2, col_2 + 1, '{}'.format(device.address))
-    stdscr.addstr(row_2 + 3, col_2 + 1, '{}'.format(atv.device_info.mac))
-    stdscr.addstr(row_2 + 4, col_2 + 1, '{}'.format(atv.device_info.model))
-    stdscr.addstr(row_2 + 5, col_2 + 1, '{}: {}'.format(atv.device_info.operating_system, atv.device_info.version))
+    stdscr.addstr(row_2 + 1, col_2 + 1, 'Play/Pause')
+    # Info
+    stdscr.addstr(row_1 + 3, col_1 + 1, '{}'.format(device.name))
+    stdscr.addstr(row_1 + 4, col_1 + 1, '{}'.format(device.address))
+    stdscr.addstr(row_1 + 5, col_1 + 1, '{}'.format(atv.device_info.mac))
+    stdscr.addstr(row_1 + 6, col_1 + 1, '{}'.format(atv.device_info.model))
+    stdscr.addstr(row_1 + 7, col_1 + 1, '{}'.format(atv.device_info.version))
 
     while True:
         c = stdscr.getch()
@@ -80,8 +82,9 @@ async def start_ui(stdscr, atv, device):
                 await atv.remote_control.top_menu()
             elif left and down:
                 await atv.remote_control.suspend()
-            elif right and down:
                 break
+            elif right and down:
+                await atv.remote_control.play_pause()
 
         elif c == ord('w'):
             await atv.remote_control.wakeup()
@@ -89,6 +92,7 @@ async def start_ui(stdscr, atv, device):
         elif c == ord('s'):
             await atv.remote_control.suspend()
             stdscr.addstr(0, 0, 'suspend')
+            break
         elif c == ord('h'):
             await atv.remote_control.left()
             stdscr.addstr(0, 0, 'left')
