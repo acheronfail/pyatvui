@@ -1,16 +1,28 @@
-from curses import wrapper
 import curses
-
 import sys
 import asyncio
 import pyatv
 
-LOOP = asyncio.get_event_loop()
+async def connect_to_atv(window, loop):
+    window.addstr(0, 0, 'Scanning for devices...')
+    window.refresh()
+    devices = await pyatv.scan(loop, timeout=5)
 
-async def start_ui(stdscr, atv, device):
+    if not devices:
+        raise Exception('No devices found')
+
+    # TODO: support multiple
+    device = devices[0]
+    window.addstr(1, 0, 'Connecting to {} {}...'.format(device.address, device.name))
+    window.refresh()
+    atv = await pyatv.connect(device, loop)
+
+    return atv, device
+
+async def start_ui(window, loop):
     # Clear screen
-    stdscr.clear()
-    stdscr.refresh()
+    window.clear()
+    window.refresh()
     curses.noecho()
 
     # Don't require enter to be pressed for inputs
@@ -18,49 +30,59 @@ async def start_ui(stdscr, atv, device):
 
     # Needed to enable mouse
     curses.mousemask(1)
-    stdscr.keypad(1)
+    window.keypad(1)
     curses.mouseinterval(0)
+
+    # Connect to the AppleTV
+    atv, device = await connect_to_atv(window, loop)
+    window.clear()
 
     def draw_ui():
         # Get window dimensions
-        max_y, max_x = stdscr.getmaxyx()
+        max_y, max_x = window.getmaxyx()
 
-        # Draw columns
+        # Get grid coords
         row_1 = max_y // 4
         row_2 = max_y - row_1
         col_1 = max_x // 4
         col_2 = max_x - col_1
 
+        # Draw grid
         for col in range(0, max_x):
-            stdscr.addstr(row_1, col, '-')
-            stdscr.addstr(row_2, col, '-')
+            window.addstr(row_1, col, '+' if col == col_1 or col == col_2 else '-')
+            window.addstr(row_2, col, '+' if col == col_1 or col == col_2 else '-')
         for row in range(0, max_y):
-            stdscr.addstr(row, col_1, '|')
-            stdscr.addstr(row, col_2, '|')
+            window.addstr(row, col_1, '+' if row == row_1 or row == row_2 else '|')
+            window.addstr(row, col_2, '+' if row == row_1 or row == row_2 else '|')
+
         # Add labels
-        stdscr.addstr(0, 0, 'Menu')
-        stdscr.addstr(0, col_2 + 1, 'Top Menu (TV)')
-        stdscr.addstr(row_1 + 1, col_1 + 1, 'Select')
-        stdscr.addstr(row_1 + 1, 0, 'Left')
-        stdscr.addstr(row_1 + 1, col_2 + 1, 'Right')
-        stdscr.addstr(0, col_1 + 1, 'Up')
-        stdscr.addstr(row_2 + 1, col_1 + 1, 'Down')
-        stdscr.addstr(row_2 + 1, 0, 'Suspend')
-        stdscr.addstr(row_2 + 1, col_2 + 1, 'Play/Pause')
-        # Info
-        stdscr.addstr(row_1 + 3, col_1 + 1, '{}'.format(device.name))
-        stdscr.addstr(row_1 + 4, col_1 + 1, '{}'.format(device.address))
-        stdscr.addstr(row_1 + 5, col_1 + 1, '{}'.format(atv.device_info.mac))
-        stdscr.addstr(row_1 + 6, col_1 + 1, '{}'.format(atv.device_info.model))
-        stdscr.addstr(row_1 + 7, col_1 + 1, '{}'.format(atv.device_info.version))
+        window.addstr(0, 0, 'Menu')
+        window.addstr(0, col_2 + 1, 'Top Menu (TV)')
+        window.addstr(row_1 + 1, col_1 + 1, 'Select')
+        window.addstr(row_1 + 1, 0, 'Left')
+        window.addstr(row_1 + 1, col_2 + 1, 'Right')
+        window.addstr(0, col_1 + 1, 'Up')
+        window.addstr(row_2 + 1, col_1 + 1, 'Down')
+        window.addstr(row_2 + 1, 0, 'Suspend')
+        window.addstr(row_2 + 1, col_2 + 1, 'Play/Pause')
 
-        return max_x, max_y, col_1, col_2, row_1, row_2
+        # Device information
+        window.addstr(row_1 + 3, col_1 + 1, '{}'.format(device.name))
+        window.addstr(row_1 + 4, col_1 + 1, '{}'.format(device.address))
+        window.addstr(row_1 + 5, col_1 + 1, '{}'.format(atv.device_info.mac))
+        window.addstr(row_1 + 6, col_1 + 1, '{}'.format(atv.device_info.model))
+        window.addstr(row_1 + 7, col_1 + 1, '{}'.format(atv.device_info.version))
 
-    max_x, max_y, col_1, col_2, row_1, row_2 = draw_ui()
+        # Move cursor to top left and hide it
+        window.move(0, 0)
+        curses.curs_set(0)
+        return col_1, col_2, row_1, row_2
+
+    col_1, col_2, row_1, row_2 = draw_ui()
 
     while True:
         try:
-            c = stdscr.getch()
+            c = window.getch()
             if c == curses.KEY_MOUSE:
                 _, x, y, _, _ = curses.getmouse()
 
@@ -99,7 +121,7 @@ async def start_ui(stdscr, atv, device):
                 await atv.remote_control.suspend()
                 break
             elif c == ord('r'):
-                draw_ui()
+                col_1, col_2, row_1, row_2 = draw_ui()
             elif c == ord('h'):
                 await atv.remote_control.left()
             elif c == ord('j'):
@@ -123,31 +145,12 @@ async def start_ui(stdscr, atv, device):
             elif c == ord('q'):
                 break  # Exit the while loop
         except Exception as err:
-            stdscr.addstr(row_1 + 9, col_1 + 1, '{}'.format(err))
+            window.addstr(row_1 + 9, col_1 + 1, '{}'.format(err))
 
-# Method that is dispatched by the asyncio event loop
-async def scan_atvs(loop):
-    """Find a device and print what is playing."""
-    print('Discovering devices on network...')
-    devices = await pyatv.scan(loop, timeout=5)
-
-    if not devices:
-        print('No device found', file=sys.stderr)
-        return
-    
-    # TODO: support multiple
-    device = devices[0]
-    print('Connecting to {} {}...'.format(device.address, device.name))
-    atv = await pyatv.connect(device, loop)
-
-    try:
-        await wrapper(start_ui, atv, device)
-    finally:
-        # Do not forget to close
-        atv.close()
-
+    await atv.close()
+    curses.curs_set(1)
 
 if __name__ == '__main__':
-    # Setup event loop and connect
-    LOOP.run_until_complete(scan_atvs(LOOP))
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(curses.wrapper(start_ui, loop))
 
