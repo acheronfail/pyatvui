@@ -1,7 +1,7 @@
-import curses
-import sys
 import asyncio
+import curses
 import pyatv
+import sys
 
 async def connect_to_atv(window, loop):
     window.addstr(0, 0, 'Scanning for devices...')
@@ -19,6 +19,48 @@ async def connect_to_atv(window, loop):
 
     return atv, device
 
+def draw_ui(window, atv, device):
+    # Get window dimensions
+    window.clear()
+    max_y, max_x = window.getmaxyx()
+
+    # Get grid coords
+    row_1 = max_y // 4
+    row_2 = max_y - row_1
+    col_1 = max_x // 4
+    col_2 = max_x - col_1
+
+    # Draw grid
+    for col in range(0, max_x):
+        window.addstr(row_1, col, '+' if col == col_1 or col == col_2 else '-')
+        window.addstr(row_2, col, '+' if col == col_1 or col == col_2 else '-')
+    for row in range(0, max_y):
+        window.addstr(row, col_1, '+' if row == row_1 or row == row_2 else '|')
+        window.addstr(row, col_2, '+' if row == row_1 or row == row_2 else '|')
+
+    # Add labels
+    window.addstr(0, 0, 'Menu')
+    window.addstr(0, col_2 + 1, 'Top Menu (TV)')
+    window.addstr(row_1 + 1, col_1 + 1, 'Select')
+    window.addstr(row_1 + 1, 0, 'Left')
+    window.addstr(row_1 + 1, col_2 + 1, 'Right')
+    window.addstr(0, col_1 + 1, 'Up')
+    window.addstr(row_2 + 1, col_1 + 1, 'Down')
+    window.addstr(row_2 + 1, 0, 'Suspend')
+    window.addstr(row_2 + 1, col_2 + 1, 'Play/Pause')
+
+    # Device information
+    window.addstr(row_1 + 3, col_1 + 1, '{}'.format(device.name))
+    window.addstr(row_1 + 4, col_1 + 1, '{}'.format(device.address))
+    window.addstr(row_1 + 5, col_1 + 1, '{}'.format(atv.device_info.mac))
+    window.addstr(row_1 + 6, col_1 + 1, '{}'.format(atv.device_info.model))
+    window.addstr(row_1 + 7, col_1 + 1, '{}'.format(atv.device_info.version))
+
+    # Move cursor to top left and hide it
+    window.move(0, 0)
+    curses.curs_set(0)
+    return col_1, col_2, row_1, row_2
+
 async def start_ui(window, loop):
     # Clear screen
     window.clear()
@@ -35,51 +77,8 @@ async def start_ui(window, loop):
 
     # Connect to the AppleTV
     atv, device = await connect_to_atv(window, loop)
-    window.clear()
 
-    def draw_ui():
-        # Get window dimensions
-        max_y, max_x = window.getmaxyx()
-
-        # Get grid coords
-        row_1 = max_y // 4
-        row_2 = max_y - row_1
-        col_1 = max_x // 4
-        col_2 = max_x - col_1
-
-        # Draw grid
-        for col in range(0, max_x):
-            window.addstr(row_1, col, '+' if col == col_1 or col == col_2 else '-')
-            window.addstr(row_2, col, '+' if col == col_1 or col == col_2 else '-')
-        for row in range(0, max_y):
-            window.addstr(row, col_1, '+' if row == row_1 or row == row_2 else '|')
-            window.addstr(row, col_2, '+' if row == row_1 or row == row_2 else '|')
-
-        # Add labels
-        window.addstr(0, 0, 'Menu')
-        window.addstr(0, col_2 + 1, 'Top Menu (TV)')
-        window.addstr(row_1 + 1, col_1 + 1, 'Select')
-        window.addstr(row_1 + 1, 0, 'Left')
-        window.addstr(row_1 + 1, col_2 + 1, 'Right')
-        window.addstr(0, col_1 + 1, 'Up')
-        window.addstr(row_2 + 1, col_1 + 1, 'Down')
-        window.addstr(row_2 + 1, 0, 'Suspend')
-        window.addstr(row_2 + 1, col_2 + 1, 'Play/Pause')
-
-        # Device information
-        window.addstr(row_1 + 3, col_1 + 1, '{}'.format(device.name))
-        window.addstr(row_1 + 4, col_1 + 1, '{}'.format(device.address))
-        window.addstr(row_1 + 5, col_1 + 1, '{}'.format(atv.device_info.mac))
-        window.addstr(row_1 + 6, col_1 + 1, '{}'.format(atv.device_info.model))
-        window.addstr(row_1 + 7, col_1 + 1, '{}'.format(atv.device_info.version))
-
-        # Move cursor to top left and hide it
-        window.move(0, 0)
-        curses.curs_set(0)
-        return col_1, col_2, row_1, row_2
-
-    col_1, col_2, row_1, row_2 = draw_ui()
-
+    col_1, col_2, row_1, row_2 = draw_ui(window, atv, device)
     while True:
         try:
             c = window.getch()
@@ -147,8 +146,11 @@ async def start_ui(window, loop):
         except Exception as err:
             window.addstr(row_1 + 9, col_1 + 1, '{}'.format(err))
 
-    await atv.close()
+    # Unhide cursor
     curses.curs_set(1)
+    window.refresh()
+    # Close connection to device
+    await atv.close()
 
 if __name__ == '__main__':
     loop = asyncio.get_event_loop()
