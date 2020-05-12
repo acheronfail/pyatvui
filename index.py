@@ -120,7 +120,7 @@ async def start_ui(window, loop):
                 await atv.remote_control.suspend()
                 break
             elif c == ord('r'):
-                col_1, col_2, row_1, row_2 = draw_ui()
+                col_1, col_2, row_1, row_2 = draw_ui(window, atv, device)
             elif c == ord('h'):
                 await atv.remote_control.left()
             elif c == ord('j'):
@@ -150,7 +150,9 @@ async def start_ui(window, loop):
     curses.curs_set(1)
     window.refresh()
     # Close connection to device
-    await atv.close()
+    result = atv.close()
+    if result is not None:
+        await result
 
 if __name__ == '__main__':
     loop = asyncio.get_event_loop()
