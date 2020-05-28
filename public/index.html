@@ -1,0 +1,49 @@
+<html>
+  <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="stylesheet" href="index.css" />
+    <script src="hammerjs/hammer.min.js" type="text/javascript"></script>
+  </head>
+  <body>
+    <div id="controls" class="hidden">
+      <button onclick="sendCustom()">Send</button>
+      <input type="text" id="input" placeholder="input custom command..." />
+      <button onclick="send('turn_off')">turn_off</button>
+      <button onclick="send('turn_on')">turn_on</button>
+      <button onclick="send('right')">right</button>
+      <button onclick="send('left')">left</button>
+      <button onclick="send('down')">down</button>
+      <button onclick="send('up')">up</button>
+      <button onclick="send('menu')">menu</button>
+      <button onclick="send('top_menu')">top_menu</button>
+      <button onclick="send('home')">home</button>
+      <button onclick="send('home_hold')">home_hold</button>
+      <button onclick="send('select')">select</button>
+      <button onclick="send('pause')">pause</button>
+      <button onclick="send('play')">play</button>
+      <button onclick="send('playpause')">playpause</button>
+      <button onclick="send('stop')">stop</button>
+      <button onclick="send('next')">next</button>
+      <button onclick="send('previous')">previous</button>
+      <button
+        onclick="document.querySelector('#controls').classList.toggle('hidden')"
+        style="background-color: #000;"
+      >
+        Close
+      </button>
+    </div>
+
+    <div id="top-button-row">
+      <div id="menu" class="tappable">Menu</div>
+      <div id="home" class="tappable">Home</div>
+    </div>
+
+    <div id="dpad" class="tappable">D-Pad</div>
+
+    <div id="bottom-button-row" class="tappable">
+      Controls
+    </div>
+
+    <script src="index.js" type="text/javascript"></script>
+  </body>
+</html>
