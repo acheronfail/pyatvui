@@ -107,7 +107,7 @@ async def start_ui(window, loop):
                 elif left and up:
                     await atv.remote_control.menu()
                 elif right and up:
-                    await atv.remote_control.top_menu()
+                    await atv.remote_control.home()
                 elif left and down:
                     await atv.remote_control.suspend()
                     break
