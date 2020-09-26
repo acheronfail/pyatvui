@@ -3,17 +3,17 @@ import curses
 import pyatv
 import sys
 
-async def connect_to_atv(window, loop):
-    window.addstr(0, 0, 'Scanning for devices...')
+async def connect_to_atv(window, loop, i=0):
+    window.addstr(i, 0, 'Scanning for devices...')
     window.refresh()
     devices = await pyatv.scan(loop, timeout=5)
 
     if not devices:
-        raise Exception('No devices found')
+        return await connect_to_atv(window, loop, i=i+1)
 
     # TODO: support multiple
     device = devices[0]
-    window.addstr(1, 0, 'Connecting to {} {}...'.format(device.address, device.name))
+    window.addstr(i + 1, 0, 'Connecting to {} {}...'.format(device.address, device.name))
     window.refresh()
     atv = await pyatv.connect(device, loop)
 
